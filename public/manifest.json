@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+
+  "name": "tfs-git-contentions-helper",
+  "description": "Adds buttons on workitems to generate to the clipboard a commit massage or a branch name that can be pasted anywhere.",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "icon.png"    
+  },
+
+  "content_scripts": [
+      {
+          "matches": ["*://*/tfs*"],
+          "js": ["js/vendor.js", "js/content_script.js"],
+          "css": ["public.css"],
+          "run_at": "document_end"
+      }
+  ],
+
+  "permissions": [
+    "tabs", "declarativeContent", "activeTab",
+    "<all_urls>"
+  ]
+}
