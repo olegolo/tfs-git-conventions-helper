@@ -26,7 +26,7 @@ interface ItemInfoWithParent {
     const config = {
         itemContainerSelector: '.workitem-info-bar.workitem-header-bar',
         containerClass: 'og-buttons',
-        apiUrl: window.location.origin + '/tfs/PHS-RAA/_apis/',
+        apiUrl: window.location.href.split('/').slice(0, 5).join('/') + "/_apis/",
         refreshTimeout: 1000 * 1
     };
 
