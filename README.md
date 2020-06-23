@@ -7,7 +7,7 @@ It generates branch names and commit messages according to the convention and co
 
 # Installation
 * Go to Extensions and enable 'Developer mode'
-* Unpack zip (skip if you've cloned the repo)
+* Download the latest **[Release](https://github.com/olegolo/tfs-git-conventions-helper/releases/tag/v1)** and unzip it somewhere (skip if you've cloned the repo and want to build it by yourself)
 * Click 'Load unpacked' and point to '/dist' folder
 * Extension should appear in the list
 
@@ -16,8 +16,8 @@ It generates branch names and commit messages according to the convention and co
 * Open a workitem and find new buttons next to a title 
   
   ![new buttons](/docs/usage_task1.png)
-* Clicking on the 'Commit Message' button will generate a text to the clipboard following the pattern ```#parentPbiId #taskId PbiTitleEscaped``` e.g. ```#117413 #117414 Implement all data sources for existing forms```
-* Clicking on the 'Branch Name' button will generate a text to the clipboard following the pattern ```_parentPbiId_taskId_pbiTitle``` e.g. ```_117413_Implement_all_data_sources_for_existing_forms```.  
+* Clicking on the 'Commit Message' button will generate a text to the clipboard following the pattern ```#parentPbiId #taskId PbiTitle``` e.g. ```#117413 #117414 Implement all data sources for existing forms```
+* Clicking on the 'Branch Name' button will generate a text to the clipboard following the pattern ```_parentPbiId_taskId_pbiTitleEscaped``` e.g. ```_117413_Implement_all_data_sources_for_existing_forms```.  
 * Since it's being copied to the clipboard all that remains is to paste it into terminal or any gui for git.
 
 ## Notes
