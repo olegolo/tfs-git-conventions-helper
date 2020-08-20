@@ -75,7 +75,7 @@ interface ItemInfoWithParent {
             : `_${itemInfo.id}_${escapeGitBranchName(itemInfo.title)}`);
     };
 
-    const escapeGitBranchName = (text: string) => text.replace(/[\[?!.*\/\. ]/g, "_");
+    const escapeGitBranchName = (text: string) => text.replace(/[\[":?!.*\/\. ]/g, "_");
     const isAlreadyInjected = (container) => $(container).find('.' + config.containerClass).length;
 
     const createButton = (container, caption: string, text: string): void => {
