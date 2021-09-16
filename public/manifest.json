@@ -11,7 +11,7 @@
 
   "content_scripts": [
       {
-          "matches": ["*://*/tfs*"],
+          "matches": ["https://dev.azure.com/*"],
           "js": ["js/vendor.js", "js/content_script.js"],
           "css": ["public.css"],
           "run_at": "document_end"
@@ -19,7 +19,7 @@
   ],
 
   "permissions": [
-    "tabs", "declarativeContent", "activeTab",
+    "tabs", "declarativeContent", "activeTab", "storage",
     "<all_urls>"
   ]
 }

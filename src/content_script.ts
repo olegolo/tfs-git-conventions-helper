@@ -1,5 +1,6 @@
 import * as $ from 'jquery';
 import { copyTextToClipboard } from './clipboardHelper';
+import { getWithExpiry, setWithExpiry } from './localStorageHelper';
 
 enum ItemTypes { Task = "Task", Pbi = "Product Backlog Item", Bug = "Bug" };
 enum RelTypes { Parent = "System.LinkTypes.Hierarchy-Reverse" };
@@ -12,17 +13,30 @@ interface ItemInfoExpandedDto {
     relations: {
         rel: RelTypes,
         url: string
-    }[]
+    }[],
+    url: string
 }
 
-interface ItemInfoWithParent {
+interface ItemInfo {
     id: number,
     type: string,
     title: string,
-    parent?: ItemInfoWithParent
+
+    iterationPath: string,
+    priority: number,
+    effort: number,
+
+    url: string,
+}
+interface ItemInfoWithParent extends ItemInfo {
+    parent?: ItemInfoWithParent,
 }
 
+type Activity = "Development" | "Testing"
+enum OriginationPrefix { Api = "API: ", Testing = "Testing: ", Ui = "UI: " }
+
 (() => {
+    console.log("OG: TFS HELPER LOADED");
     const config = {
         itemContainerSelector: '.workitem-info-bar.workitem-header-bar',
         containerClass: 'og-buttons',
@@ -49,20 +63,31 @@ interface ItemInfoWithParent {
 
         const itemLink = container.find("a").attr("href");
         if (itemLink == null) {
-            console.log("couldn't find item element yet. Skipping...");
+            console.debug("OG: couldn't find item element yet. Skipping...");
             return;
         }
 
         const itemId = extractItemId(itemLink);
+
+        if (getWithExpiry(itemId)){
+            console.debug("OG: previous request haven't finished yet");
+            return;
+        }
+        setWithExpiry(itemId, itemId); console.debug("OG: setting expiry token"+getWithExpiry(itemId));
+
         const itemInfo = await requestItemInfoWithParent(itemId);
-        console.log(itemInfo);
+        console.debug(itemInfo);
 
         // TODO: Lost inspiration below and till the end func. Hacks, Needs rework
         if (itemInfo.type != ItemTypes.Task) // We don't want generating for other types
             itemInfo.parent = null;
 
-        if (isAlreadyInjected(container)) // double checking, raise conditions
+        document.querySelectorAll('.info-text-wrapper').forEach((x: HTMLElement) => x.style.display = "inline");
+
+        if (isAlreadyInjected(container)) {// double checking, raise conditions
+            console.debug("OG: buttons already injected");
             return;
+        }
 
         var injectionContainer = $(`<div class=${config.containerClass}></div>`);
         $(itemContainerElement).append(injectionContainer);
@@ -73,6 +98,11 @@ interface ItemInfoWithParent {
         createButton(injectionContainer, "Branch Name", itemInfo.parent
             ? `_${itemInfo.parent.id}_${itemInfo.id}_${escapeGitBranchName(itemInfo.parent.title)}`
             : `_${itemInfo.id}_${escapeGitBranchName(itemInfo.title)}`);
+
+        // tickets
+        createAddChildTaskButton(container, "Add Api", itemInfo, "Development", OriginationPrefix.Api);
+        createAddChildTaskButton(container, "Add UI", itemInfo, "Development", OriginationPrefix.Ui);
+        createAddChildTaskButton(container, "Add Testing", itemInfo, "Testing", OriginationPrefix.Testing);
     };
 
     const escapeGitBranchName = (text: string) => text.replace(/[\[":?!.*\/\. ]/g, "_");
@@ -83,25 +113,71 @@ interface ItemInfoWithParent {
         container.append(button);
         button.on('click', () => {
             copyTextToClipboard(text, container.get(0));
-            console.log("copied " + text);
+            console.log("OG: copied " + text);
+        });
+    }
+
+    const createAddChildTaskButton = (container, caption: string, itemInfo: ItemInfo, activity: Activity, titlePrefix: string = ""): void => {
+        var button = $(`<button>${caption}</button>`);
+        container.append(button);
+        button.on('click', async () => {
+            button.css("background-color", "wheat");
+            console.debug("OG: creating task");
+            const resp = await fetch(config.apiUrl + "wit/workitems/$task?api-version=6.0",
+                {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json-patch+json' },
+                    body: JSON.stringify([
+                        {
+                            "op": "add",
+                            "path": "/fields/System.Title",
+                            "from": null,
+                            "value": titlePrefix + itemInfo.title
+                        },
+                        {
+                            "op": "add",
+                            "path": "/fields/Microsoft.VSTS.Common.Activity",
+                            "from": null,
+                            "value": activity
+                        },
+                        {
+                            "op": "add",
+                            "path": "/fields/System.IterationPath",
+                            "from": null,
+                            "value": itemInfo.iterationPath
+                        },
+                        {
+                            "op": "add",
+                            "path": "/relations/-",
+                            "value": {
+                                "rel": "System.LinkTypes.Hierarchy-Reverse",
+                                "url": itemInfo.url
+                            }
+                        }
+                    ])
+                });
+            button.css("background-color", "green");
+            console.debug(resp.json());
         });
     }
 
     const requestItemInfoWithParent = async (id: number, withParent = true): Promise<ItemInfoWithParent> => {
         const itemUrl = composeExpandedItemUrl(id);
+        console.debug("OG: requesting item info");
         const info: ItemInfoExpandedDto = await fetch(itemUrl).then(response => response.json());
         let result: ItemInfoWithParent = fromDto(info);
 
         if (!withParent)
             return result;
 
-        const parentRelations = info.relations.filter(item => item.rel === RelTypes.Parent);
-        if (!parentRelations.length) {
-            console.warn(`No parent for the item with Id ${id} found`);
+        const parentRelations = info.relations && info.relations.filter(item => item.rel === RelTypes.Parent);
+        if (!parentRelations || !parentRelations.length) {
+            console.log(`OG: WARNING: No parent for the item with Id ${id} found`);
             return result;
         }
 
         const parentItemUrl = parentRelations[0].url; // not expanded
+        console.debug("OG: requesting parent item info");
         const parentInfo: ItemInfoExpandedDto = await fetch(parentItemUrl).then(response => response.json());
         result = { ...result, parent: fromDto(parentInfo) };
 
@@ -113,6 +189,10 @@ interface ItemInfoWithParent {
             id: info.id,
             type: info.fields["System.WorkItemType"],
             title: info.fields["System.Title"],
+            iterationPath: info.fields["System.IterationPath"],
+            priority: info.fields["Microsoft.VSTS.Common.Priority"],
+            effort: info.fields["Microsoft.VSTS.Scheduling.Effort"],
+            url: info.url
         };
     }
 
@@ -120,7 +200,6 @@ interface ItemInfoWithParent {
     const composeExpandedItemUrl = (id: number): string => `${composeItemUrl(id)}?$expand=relations`;
     const getContainers = () => document.querySelectorAll(config.itemContainerSelector);
     const extractItemId = (url: string): number => +url.substring(url.lastIndexOf('/') + 1); // TODO: probably needs regex parsing for safety
-
 
     monitorInjections();
 })();
