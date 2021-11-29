@@ -7,7 +7,8 @@ It generates branch names and commit messages according to the convention and co
 
 # Installation
 * Go to Extensions and enable 'Developer mode'
-* Download the latest **[Release](https://github.com/olegolo/tfs-git-conventions-helper/releases/tag/v1)** and unzip it somewhere (skip if you've cloned the repo and want to build it by yourself)
+* Download the latest **[Release](https://github.com/olegolo/tfs-git-conventions-helper/releases)** and 
+* unzip it somewhere. **Unpacked files are still needed after installation** (skip if you've cloned the repo and want to build it by yourself)
 * Click 'Load unpacked' and point to '/dist' folder
 * Extension should appear in the list
 
